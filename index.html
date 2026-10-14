@@ -48,7 +48,6 @@ html, body {
 
 /* 本周任务清单 —— 用 details 保证一定能显示 */
 details.sb-hw {
-  display: block;
   background: #fff;
   border: 3px solid #93c5fd;
   border-radius: 16px;
@@ -245,7 +244,7 @@ details.sb-hw[open] .sb-hw-header .hw-arrow { transform: rotate(180deg); }
       <div class="sb-stat"><div class="ico">🎟️</div><div class="lb">抽奖券</div><div class="vl" id="hTickets">0</div></div>
       <div class="sb-stat"><div class="ico">👹</div><div class="lb">打败 BOSS</div><div class="vl" id="hBoss">0</div></div>
     </div>
-    <details class="sb-hw" open>
+    <details class="sb-hw">
       <summary class="sb-hw-header">
         <span>📝 本周任务清单</span>
         <span class="hw-arrow">▼</span>
