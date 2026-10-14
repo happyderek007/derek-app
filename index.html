@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Derek作战指挥部</title>
+
+<!-- ========== PWA / 添加到主屏幕 相关 ========== -->
+<!-- iOS Safari：全屏、状态栏样式、桌面名称、桌面图标 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Derek指挥部">
+<link rel="apple-touch-icon" href="icon-192.png">
+<!-- Android / 通用：Web App Manifest -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#3b82f6">
+<!-- ============================================ -->
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body {
+  height: 100vh; overflow: hidden;
+  font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+  background: linear-gradient(180deg, #e0f2fe 0%, #bfdbfe 100%);
+  color: #1e3a5f; font-weight: 600;
+}
+.app { display: flex; height: 100vh; gap: 12px; padding: 12px;
+  padding-top: calc(12px + env(safe-area-inset-top));
+  padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+.sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 4px; }
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: #93c5fd; border-radius: 3px; }
+.sb-title { background: #fff; border: 3px solid #60a5fa; border-radius: 18px; padding: 18px 14px; text-align: center; box-shadow: 0 4px 14px rgba(59,130,246,.18); flex-shrink: 0; }
+.sb-title .title-text { font-size: 17px; font-weight: 900; letter-spacing: 2px; line-height: 1.6;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb, #60a5fa);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; display: inline-block; }
+.sb-stats { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.sb-stat { display: flex; align-items: center; gap: 10px; background: #fff; border: 2.5px solid #93c5fd; border-radius: 14px; padding: 10px 14px; box-shadow: 0 2px 8px rgba(59,130,246,.12); }
+.sb-stat .ico { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.sb-stat:nth-child(1) .ico { background: #fef3c7; }
+.sb-stat:nth-child(2) .ico { background: #dbeafe; }
+.sb-stat:nth-child(3) .ico { background: #d9f7f4; }
+.sb-stat .lb { flex: 1; font-size: 12px; color: #64748b; font-weight: 700; }
+.sb-stat .vl { font-size: 18px; font-weight: 900; }
+.sb-stat:nth-child(1) .vl { color: #f59e0b; }
+.sb-stat:nth-child(2) .vl { color: #2563eb; }
+.sb-stat:nth-child(3) .vl { color: #0ea5e9; }
+
+/* 本周任务清单 —— 用 details 保证一定能显示 */
+details.sb-hw {
+  display: block;
+  background: #fff;
+  border: 3px solid #93c5fd;
+  border-radius: 16px;
+  box-shadow: 0 3px 10px rgba(59,130,246,.15);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+details.sb-hw > summary.sb-hw-header {
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #1e40af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #eff6ff;
+  min-height: 50px;
+  list-style: none;
+  outline: none;
+}
+details.sb-hw > summary.sb-hw-header::-webkit-details-marker { display: none; }
+details.sb-hw > summary.sb-hw-header::marker { content: ''; }
+.sb-hw-header .hw-arrow { font-size: 12px; color: #3b82f6; transition: transform .3s; }
+details.sb-hw[open] .sb-hw-header .hw-arrow { transform: rotate(180deg); }
+.sb-hw-body { padding: 12px 14px 14px; border-top: 2px dashed #dbeafe; }
+.sb-hw-body label { font-size: 12px; font-weight: 900; display: block; margin-bottom: 4px; margin-top: 10px; }
+.sb-hw-body label:first-child { margin-top: 0; }
+.sb-hw-body label:nth-of-type(1) { color: #dc2626; }
+.sb-hw-body label:nth-of-type(2) { color: #d97706; }
+.sb-hw-body label:nth-of-type(3) { color: #16a34a; }
+.sb-hw-body textarea { width: 100%; border: 2px solid #bfdbfe; border-radius: 10px; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 48px; background: #f8fafc; color: #1e3a5f; outline: none; line-height: 1.5; font-weight: 600; }
+.sb-hw-body textarea:focus { border-color: #3b82f6; background: #fff; }
+
+.sb-nav { display: flex; flex-direction: column; gap: 3px; background: #fff; border: 3px solid #93c5fd; border-radius: 16px; padding: 8px; box-shadow: 0 3px 10px rgba(59,130,246,.15); flex-shrink: 0; }
+.sb-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 800; color: #64748b; cursor: pointer; min-height: 40px; }
+.sb-nav-item:active { background: #eff6ff; }
+.sb-nav-item.active { background: linear-gradient(135deg, #3b82f6, #60a5fa); color: #fff; box-shadow: 0 3px 10px rgba(59,130,246,.35); }
+
+.main { flex: 1; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-right: 4px; min-width: 0; }
+.main::-webkit-scrollbar { width: 6px; }
+.main::-webkit-scrollbar-thumb { background: #93c5fd; border-radius: 3px; }
+.main-header { background: #fff; border: 3px solid #60a5fa; border-radius: 18px; padding: 22px 26px 24px; box-shadow: 0 5px 16px rgba(59,130,246,.18); position: relative; overflow: hidden; flex-shrink: 0; }
+.main-header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd, #60a5fa, #3b82f6); }
+.main-header h1 { font-size: 28px; font-weight: 900; letter-spacing: 3px; line-height: 1.5;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb, #60a5fa);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; }
+.main-header .sub { font-size: 13px; color: #475569; margin-top: 6px; font-weight: 700; }
+
+.week-nav { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 3px solid #93c5fd; border-radius: 16px; padding: 6px 12px; box-shadow: 0 3px 10px rgba(59,130,246,.15); flex-shrink: 0; }
+.week-nav button { width: 42px; height: 42px; border: none; border-radius: 10px; background: #eff6ff; color: #2563eb; font-size: 18px; font-weight: 900; cursor: pointer; }
+.week-nav button:disabled { opacity: .3; }
+.week-label { font-size: 13px; font-weight: 900; color: #1e40af; }
+
+.timeline { display: flex; gap: 5px; background: #fff; border: 3px solid #93c5fd; border-radius: 16px; padding: 8px; box-shadow: 0 3px 10px rgba(59,130,246,.15); flex-shrink: 0; }
+.day-chip { flex: 1; text-align: center; padding: 8px 4px; background: #f8fafc; border: 2px solid #bfdbfe; border-radius: 12px; font-size: 11px; color: #64748b; cursor: pointer; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; }
+.day-chip .d { font-size: 16px; font-weight: 900; color: #1e40af; }
+.day-chip .day-stars { font-size: 10px; font-weight: 900; margin-top: 2px; color: #f59e0b; }
+.day-chip.active { background: linear-gradient(135deg, #3b82f6, #60a5fa); border-color: #2563eb; color: #fff; }
+.day-chip.active .d, .day-chip.active .day-stars { color: #fff; }
+.day-chip.today:not(.active) { border-color: #f59e0b; }
+
+.subject-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.subject-block { background: #fff; border: 3px solid #bfdbfe; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 14px rgba(59,130,246,.15); min-width: 0; }
+.subject-head { padding: 12px 16px; font-size: 15px; font-weight: 900; color: #fff; letter-spacing: 2px; display: flex; align-items: center; justify-content: space-between; }
+.subject-head .cnt { font-size: 11px; background: rgba(255,255,255,.3); padding: 3px 10px; border-radius: 10px; font-weight: 900; }
+.sj-语文 .subject-head { background: linear-gradient(135deg, #dc2626, #ef4444); }
+.sj-数学 .subject-head { background: linear-gradient(135deg, #d97706, #f59e0b); }
+.sj-英语 .subject-head { background: linear-gradient(135deg, #16a34a, #22c55e); }
+.sj-新地盘 .subject-head { background: linear-gradient(135deg, #7c3aed, #8b5cf6); }
+
+.task-card { padding: 12px 16px; border-bottom: 2px dashed #eff6ff; cursor: pointer; background: #fff; }
+.task-card:last-child { border-bottom: none; }
+.task-card.checked { background: #f0fdf4; border-left: 5px solid #4ade80; }
+.task-card.failed { background: #fef2f2; }
+.task-card-top { display: flex; align-items: center; gap: 10px; }
+.star-check { width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; line-height: 1; }
+.star-check.star-empty { color: #dbe4f0; }
+.star-check.star-full { color: #fbbf24; text-shadow: 0 0 10px rgba(251,191,36,.8); }
+.star-check.star-half, .star-check.star-quality { background: linear-gradient(90deg, #fbbf24 50%, #dbe4f0 50%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.star-check.star-none { color: #ef4444; font-size: 22px; font-weight: 900; }
+.task-info { flex: 1; min-width: 0; }
+.task-name { font-size: 14px; font-weight: 900; color: #1e3a5f; line-height: 1.35; word-break: break-word; }
+.task-card.checked .task-name { text-decoration: line-through; color: #94a3b8; }
+.task-meta { display: flex; gap: 10px; margin-top: 4px; font-size: 11px; color: #94a3b8; flex-wrap: wrap; font-weight: 700; }
+.task-meta b { color: #2563eb; font-weight: 900; }
+.task-meta .m-optional { color: #d97706; font-weight: 900; }
+.task-progress { margin-top: 6px; height: 5px; background: #eff6ff; border-radius: 3px; overflow: hidden; }
+.task-progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.task-card.checked .task-progress-fill { background: linear-gradient(90deg, #22c55e, #4ade80); }
+.task-tag { display: inline-block; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 6px; margin-left: 6px; vertical-align: middle; }
+.tag-required { background: #fee2e2; color: #dc2626; }
+.tag-optional { background: #fef3c7; color: #d97706; }
+
+.card { background: #fff; border: 3px solid #bfdbfe; border-radius: 16px; padding: 16px; box-shadow: 0 4px 14px rgba(59,130,246,.15); margin-bottom: 10px; }
+.card h3 { font-size: 15px; font-weight: 900; color: #1e40af; letter-spacing: 1px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px dashed #dbeafe; }
+
+.boss-card { background: linear-gradient(135deg, #1e40af, #3b82f6); border-radius: 16px; padding: 20px; color: #fff; text-align: center; }
+.boss-emoji { font-size: 52px; }
+.boss-name { font-size: 17px; font-weight: 900; margin: 6px 0; letter-spacing: 2px; }
+.boss-hp-bg { height: 14px; background: rgba(0,0,0,.25); border-radius: 7px; overflow: hidden; margin: 12px 0; }
+.boss-hp-fill { height: 100%; background: linear-gradient(90deg, #fbbf24, #ef4444); }
+.boss-btn { width: 100%; padding: 12px; border: 2px solid rgba(255,255,255,.6); border-radius: 12px; font-size: 14px; font-weight: 900; cursor: pointer; min-height: 46px; background: rgba(255,255,255,.2); color: #fff; }
+.boss-btn.ready { background: linear-gradient(135deg, #fbbf24, #f59e0b); border-color: #fff; color: #1e3a5f; }
+.boss-btn:disabled { opacity: .55; }
+
+.wg-row { margin-bottom: 10px; }
+.wg-row .wn { font-size: 12px; font-weight: 900; margin-bottom: 4px; color: #1e40af; }
+.wg-dots { display: flex; gap: 4px; }
+.wg-dot { flex: 1; height: 26px; border-radius: 6px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #cbd5e1; }
+.wg-dot.ok { background: #dcfce7; color: #15803d; }
+.wg-dot.rest { background: #f8fafc; color: #e2e8f0; }
+
+.pbar-row { margin-bottom: 10px; }
+.pbar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #475569; font-weight: 800; }
+.pbar-bg { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+.pbar-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+
+.report-stat { display: flex; gap: 8px; margin-bottom: 12px; }
+.report-stat > div { flex: 1; text-align: center; background: #eff6ff; border: 2px solid #bfdbfe; border-radius: 12px; padding: 10px 6px; }
+.report-stat .v { font-size: 18px; font-weight: 900; color: #2563eb; }
+.report-stat .k { font-size: 10px; color: #64748b; margin-top: 2px; font-weight: 800; }
+.report textarea { width: 100%; border: 2px solid #bfdbfe; border-radius: 10px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 56px; margin-bottom: 8px; background: #f8fafc; color: #1e3a5f; outline: none; font-weight: 600; }
+.report textarea:focus { border-color: #3b82f6; background: #fff; }
+.report label { font-size: 12px; font-weight: 900; color: #1e40af; display: block; margin-bottom: 4px; }
+.report-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px dashed #dbeafe; }
+.report-title { font-size: 14px; font-weight: 900; color: #1e40af; }
+
+.prize-color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: middle; border: 2px solid #fff; }
+.prize-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 2px solid #e2e8f0; margin-bottom: 8px; }
+.prize-item .pn { flex: 1; font-size: 13px; font-weight: 800; color: #1e3a5f; }
+.prize-item button { border: 2px solid #fca5a5; background: #fef2f2; color: #dc2626; border-radius: 8px; padding: 5px 10px; font-size: 11px; cursor: pointer; font-weight: 900; }
+
+.btn { padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 900; cursor: pointer; border: none; min-height: 42px; }
+.btn-primary { background: linear-gradient(135deg, #3b82f6, #60a5fa); color: #fff; }
+.btn-ghost { background: #eff6ff; color: #1e40af; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.modal-bg { position: fixed; inset: 0; background: rgba(30,58,95,.5); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 100; }
+.modal-bg.show { display: flex; }
+.modal { background: #fff; border: 3px solid #60a5fa; border-radius: 18px; padding: 20px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; }
+.modal h2 { font-size: 16px; margin-bottom: 14px; color: #1e40af; font-weight: 900; padding-bottom: 10px; border-bottom: 2px dashed #dbeafe; }
+.form-group { margin-bottom: 10px; }
+.form-group > label { font-size: 12px; font-weight: 900; color: #1e40af; display: block; margin-bottom: 5px; }
+.form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 2px solid #bfdbfe; border-radius: 10px; font-size: 15px; font-family: inherit; outline: none; min-height: 42px; background: #f8fafc; color: #1e3a5f; font-weight: 600; }
+.form-group input:focus, .form-group select:focus { border-color: #3b82f6; background: #fff; }
+.modal-btns { display: flex; gap: 10px; margin-top: 14px; }
+.modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 13px; font-weight: 900; cursor: pointer; min-height: 44px; }
+
+.state-picker-backdrop { position: fixed; inset: 0; background: rgba(30,58,95,.45); z-index: 199; }
+.state-picker { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 6px; background: #fff; border: 3px solid #60a5fa; border-radius: 18px; padding: 14px; min-width: 280px; max-width: 340px; z-index: 200; }
+.state-picker-title { font-size: 14px; font-weight: 900; color: #1e40af; text-align: center; padding: 4px 0 10px; border-bottom: 2px dashed #dbeafe; margin-bottom: 4px; }
+.state-option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 10px; cursor: pointer; background: #f8fafc; border: 2px solid #e2e8f0; min-height: 48px; }
+.state-option.active { background: #eff6ff; border-color: #3b82f6; }
+.state-option .state-icon { font-size: 22px; width: 28px; text-align: center; }
+.state-option .state-label { flex: 1; font-size: 14px; font-weight: 900; color: #1e3a5f; }
+.state-option .state-stars { font-size: 11px; font-weight: 900; color: #f59e0b; padding: 3px 8px; background: #fef3c7; border-radius: 6px; }
+.state-clear { justify-content: center; background: #fef2f2; border-color: #fca5a5; color: #dc2626; font-weight: 900; }
+
+.toast { position: fixed; top: 30%; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #3b82f6, #60a5fa); color: #fff; padding: 12px 22px; border-radius: 12px; font-size: 14px; z-index: 300; opacity: 0; transition: .3s; pointer-events: none; max-width: 80%; text-align: center; font-weight: 900; }
+.toast.show { opacity: 1; }
+
+.confirm-bg { position: fixed; inset: 0; background: rgba(30,58,95,.5); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 400; }
+.confirm-bg.show { display: flex; }
+.confirm-box { background: #fff; border: 3px solid #60a5fa; border-radius: 18px; padding: 20px; width: 100%; max-width: 340px; }
+.confirm-box .confirm-icon { font-size: 40px; text-align: center; margin-bottom: 8px; }
+.confirm-box .confirm-msg { font-size: 14px; font-weight: 700; color: #1e3a5f; text-align: center; line-height: 1.6; margin-bottom: 16px; word-break: break-word; }
+.confirm-box .confirm-btns { display: flex; gap: 10px; }
+.confirm-box .confirm-btns button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 13px; font-weight: 900; cursor: pointer; min-height: 44px; font-family: inherit; }
+.confirm-cancel { background: #eff6ff; color: #1e40af; }
+.confirm-ok { background: linear-gradient(135deg, #3b82f6, #60a5fa); color: #fff; }
+
+.empty { text-align: center; padding: 30px 16px; color: #94a3b8; font-size: 13px; font-weight: 800; }
+@keyframes fall { 0% { transform: translateY(-40px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(360deg); opacity: 0; } }
+
+@media (max-width: 767px) {
+  html, body { height: auto; overflow: auto; }
+  .app { display: block; height: auto; padding-bottom: 20px; }
+  .sidebar { width: 100%; overflow: visible; margin-bottom: 12px; }
+  .main { overflow: visible; }
+  .timeline { overflow-x: auto; }
+  .day-chip { min-width: 52px; }
+  .subject-columns { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-title"><span class="title-text">◤ Derek作战指挥部 ◢</span></div>
+    <div class="sb-stats">
+      <div class="sb-stat"><div class="ico">⭐</div><div class="lb">星星钱包</div><div class="vl" id="hStars">0</div></div>
+      <div class="sb-stat"><div class="ico">🎟️</div><div class="lb">抽奖券</div><div class="vl" id="hTickets">0</div></div>
+      <div class="sb-stat"><div class="ico">👹</div><div class="lb">打败 BOSS</div><div class="vl" id="hBoss">0</div></div>
+    </div>
+    <details class="sb-hw" open>
+      <summary class="sb-hw-header">
+        <span>📝 本周任务清单</span>
+        <span class="hw-arrow">▼</span>
+      </summary>
+      <div class="sb-hw-body">
+        <label>语文</label><textarea id="hwYw" placeholder="一行一项"></textarea>
+        <label>数学</label><textarea id="hwSx" placeholder="一行一项"></textarea>
+        <label>英语</label><textarea id="hwYy" placeholder="一行一项"></textarea>
+      </div>
+    </details>
+    <nav class="sb-nav" id="sbNav">
+      <div class="sb-nav-item active" data-view="today">📋 今天</div>
+      <div class="sb-nav-item" data-view="week">📅 本周</div>
+      <div class="sb-nav-item" data-view="report">📝 周复盘</div>
+      <div class="sb-nav-item" data-view="boss">👹 BOSS 战</div>
+      <div class="sb-nav-item" data-view="data">📊 数据</div>
+      <div class="sb-nav-item" data-view="season">🏆 赛季</div>
+      <div class="sb-nav-item" data-view="draw">🎰 盲盒</div>
+      <div class="sb-nav-item" data-view="prize">🎁 奖品库</div>
+      <div class="sb-nav-item" data-view="settings">⚙️ 设置</div>
+    </nav>
+  </aside>
+  <main class="main">
+    <div class="main-header">
+      <h1>Derek学习作战指挥部</h1>
+      <div class="sub">每天进步一点点，做最棒的自己 ✨</div>
+    </div>
+    <div class="week-nav">
+      <button id="prevWeek">‹</button>
+      <div class="week-label" id="weekLabel">本周</div>
+      <button id="nextWeek" disabled>›</button>
+    </div>
+    <div class="timeline" id="timeline"></div>
+    <div id="mainContent"></div>
+  </main>
+</div>
+
+<div class="modal-bg" id="modalTask">
+  <div class="modal">
+    <h2 id="taskModalTitle">新增任务</h2>
+    <div class="form-group"><label>所属科目</label><select id="fSubject"><option>语文</option><option>数学</option><option>英语</option><option>新地盘</option></select></div>
+    <div class="form-group"><label>任务名称</label><input id="fName" placeholder="如：小白鸥阅读"></div>
+    <div class="form-group"><label>任务类型</label><select id="fRequired"><option value="1">必做</option><option value="0">选做</option></select></div>
+    <div class="form-group" id="fGoalGroup" style="display:none"><label>每周目标次数</label><input id="fGoal" type="number" min="1" max="7" value="4"></div>
+    <div class="form-group"><label>每周哪几天做（可多选）</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <label style="font-size:13px"><input type="checkbox" class="day-check" value="1">一</label>
+        <label style="font-size:13px"><input type="checkbox" class="day-check" value="2">二</label>
+        <label style="font-size:13px"><input type="checkbox" class="day-check" value="3">三</label>
+        <label style="font-size:13px"><input type="checkbox" class="day-check" value="4">四</label>
+        <label style="font-size:13px"><input type="checkbox" class="day-check" value="5">五</label>
+        <label style="font-size:13px"><input type="checkbox" class="day-check" value="6">六</label>
+        <label style="font-size:13px"><input type="checkbox" class="day-check" value="0">日</label>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px">全部不勾 = 每天都做</div>
+    </div>
+    <div class="form-group"><label>计划时长（分钟）</label><input id="fDuration" type="number" min="0" placeholder="如 15"></div>
+    <div class="form-group"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="fBossOnly"> 标记为 BOSS 专属挑战</label></div>
+    <div class="modal-btns"><button class="btn btn-ghost" id="taskCancel">取消</button><button class="btn btn-primary" id="taskSave">保存</button></div>
+    <button class="btn btn-ghost" id="taskDelete" style="width:100%;margin-top:8px;display:none;border:2px solid #fca5a5;color:#dc2626;background:#fef2f2;">🗑️ 删除此任务</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalPrize">
+  <div class="modal">
+    <h2 id="prizeModalTitle">🎁 添加奖品</h2>
+    <div class="form-group"><label>奖品名称</label><input id="pName"></div>
+    <div class="form-group"><label>稀有度</label><select id="pRarity"><option>普通</option><option>稀有</option><option>传说</option></select></div>
+    <div class="form-group"><label>概率权重</label><input id="pWeight" type="number" min="1" value="60"></div>
+    <div class="form-group"><label>兑换需要星星数</label><input id="pCost" type="number" min="1" value="10"></div>
+    <div class="form-group"><label>显示颜色</label><input id="pColor" type="color" value="#94a3b8" style="height:42px;padding:4px"></div>
+    <div class="modal-btns"><button class="btn btn-ghost" id="prizeCancel">取消</button><button class="btn btn-primary" id="prizeAdd">保存</button></div>
+    <button class="btn btn-ghost" id="prizeDelete" style="width:100%;margin-top:8px;display:none;border:2px solid #fca5a5;color:#dc2626;background:#fef2f2;">🗑️ 删除此奖品</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalResult">
+  <div class="modal" style="text-align:center">
+    <h2 id="resultTitle">🎉 抽奖结果</h2>
+    <div id="resultBody"></div>
+    <div class="modal-btns"><button class="btn btn-primary" id="resultClose">收下</button></div>
+  </div>
+</div>
+
+<div class="confirm-bg" id="confirmBg">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="confirmIcon">⚠️</div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" id="confirmCancel">取消</button>
+      <button class="confirm-ok" id="confirmOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+var LS_TASKS='study_tasks_v8', LS_CHECK='study_checks_v8', LS_PRIZE='study_prizes_v8';
+var LS_WEEKLY='study_weekly_v1', LS_STARS='study_stars_v1', LS_TICKETS='study_tickets_v1';
+var LS_BOSS='study_boss_v1', LS_HOMEWORK='study_homework_v2', LS_PRIZE_INVENTORY='study_prize_inventory_v1';
+var LS_DAILY_TICKET='study_daily_ticket_v1', LS_ACTUAL='study_actual_times_v1';
+var OVERDUE_DAYS = 7;
+
+function load(k,d){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
+function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+var tasks = load(LS_TASKS,[
+  {id:'t2',subject:'语文',name:'小白鸥阅读',days:[1,3,5,0],duration:20,required:false,goal:4,bossOnly:false},
+  {id:'t4',subject:'数学',name:'董老师作业',days:[6,1],duration:25,required:true,bossOnly:false},
+  {id:'t5',subject:'数学',name:'董老师作业复盘',days:[3],duration:15,required:true,bossOnly:false},
+  {id:'t7',subject:'英语',name:'Rose老师作业',days:[0,2],duration:20,required:true,bossOnly:false},
+  {id:'t8',subject:'英语',name:'Rose作业复盘',days:[4],duration:15,required:true,bossOnly:false},
+  {id:'t9',subject:'新地盘',name:'物理',days:[],duration:20,required:false,goal:4,bossOnly:false},
+  {id:'t10',subject:'新地盘',name:'化学',days:[],duration:20,required:false,goal:4,bossOnly:false}
+]);
+tasks = tasks.map(function(t){ if(typeof t.bossOnly !== 'boolean') t.bossOnly = false; return t; });
+
+var checks = load(LS_CHECK,{});
+var prizes = load(LS_PRIZE,[
+  {id:'p1',name:'游戏多玩半小时',rarity:'普通',weight:60,color:'#94a3b8',cost:10},
+  {id:'p3',name:'零花钱增加 20 元',rarity:'普通',weight:60,color:'#94a3b8',cost:15},
+  {id:'p4',name:'零花钱增加 50 元',rarity:'传说',weight:10,color:'#f59e0b',cost:80},
+  {id:'p5',name:'周末活动许愿池',rarity:'传说',weight:10,color:'#f59e0b',cost:100}
+]);
+prizes = prizes.map(function(p){
+  var dc = p.rarity === '普通' ? '#94a3b8' : (p.rarity === '稀有' ? '#3b82f6' : '#f59e0b');
+  var dw = p.rarity === '普通' ? 60 : (p.rarity === '稀有' ? 30 : 10);
+  var dcost = p.rarity === '普通' ? 10 : (p.rarity === '稀有' ? 30 : 80);
+  return Object.assign({}, p, {
+    weight: (typeof p.weight === 'number') ? p.weight : dw,
+    color: p.color || dc,
+    cost: (typeof p.cost === 'number') ? p.cost : dcost
+  });
+});
+save(LS_PRIZE, prizes);
+
+var weeklyNotes = load(LS_WEEKLY,{});
+var totalStars = load(LS_STARS,0);
+var totalTickets = load(LS_TICKETS,0);
+var bossDefeated = load(LS_BOSS,{});
+var homeworkData = load(LS_HOMEWORK, {});
+var prizeInventory = load(LS_PRIZE_INVENTORY, []);
+var prizeTab = 'inventory';
+var dailyTicketGiven = load(LS_DAILY_TICKET, {});
+var actualTimes = load(LS_ACTUAL, {});
+
+function fmt(d){ var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0'); return y+'-'+m+'-'+dd; }
+function getMonday(d){ var dt=new Date(d); var day=dt.getDay()||7; dt.setDate(dt.getDate()-day+1); dt.setHours(0,0,0,0); return dt; }
+function weekKey(d){ var mon=getMonday(d); var onejan=new Date(mon.getFullYear(),0,1); var week=Math.ceil((((mon-onejan)/86400000)+onejan.getDay()+1)/7); return mon.getFullYear()+'-W'+String(week).padStart(2,'0'); }
+function addDays(d,n){ var dt=new Date(d); dt.setDate(dt.getDate()+n); return dt; }
+function isSameDay(a,b){ return fmt(a)===fmt(b); }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+var WD=['一','二','三','四','五','六','日'];
+function dayName(d){ return WD[(d.getDay()+6)%7]; }
+
+var curWeekMonday = getMonday(new Date());
+var curDate = new Date();
+var today = new Date();
+var curView = 'today';
+
+function isScheduled(t, dow){ if(!t.days || t.days.length===0) return true; return t.days.indexOf(dow) !== -1; }
+function getSubjectSubItems(subject, wk){
+  var d = homeworkData[wk] || {};
+  var txt = '';
+  if(subject === '语文') txt = d.yw || '';
+  else if(subject === '数学') txt = d.sx || '';
+  else if(subject === '英语') txt = d.yy || '';
+  return txt.split('\n').map(function(s){return s.trim();}).filter(function(s){return s.length > 0;});
+}
+function needsExpand(t){ if(t.name === '董老师作业') return '数学'; if(t.name === 'Rose老师作业') return '英语'; return null; }
+function getShortName(t){ if(t.name === 'Rose老师作业') return 'Rose作业'; if(t.name === '董老师作业') return '董老师作业'; return t.name; }
+function getExpandedTasks(wk){
+  var result = [];
+  tasks.forEach(function(t){
+    var subjKey = needsExpand(t);
+    if(subjKey){
+      var items = getSubjectSubItems(subjKey, wk);
+      if(items.length > 0){
+        var prefix = getShortName(t);
+        items.forEach(function(txt, idx){
+          result.push({id: t.id + '#' + idx, parentId: t.id, subject: t.subject, name: prefix + (idx+1) + '：' + txt, days: t.days, duration: t.duration, required: t.required, goal: t.goal, bossOnly: t.bossOnly});
+        });
+        return;
+      }
+    }
+    result.push(t);
+  });
+  return result;
+}
+function getStateStars(state){ if(state === 'full') return 1; if(state === 'half') return 0.5; if(state === 'quality') return 0.5; return 0; }
+function getTaskMultiplier(taskId){
+  var parentId = taskId.split('#')[0];
+  var t = tasks.find(function(x){ return x.id === parentId; });
+  return (t && !t.required) ? 2 : 1;
+}
+function getWeekDoneCount(t, monday){
+  var cnt = 0;
+  for(var i=0;i<7;i++){
+    var ds = fmt(addDays(monday,i));
+    var st = checks[ds] && checks[ds][t.id];
+    if(st && st !== 'none') cnt++;
+  }
+  return cnt;
+}
+function getOptionalRemain(t, monday){ return Math.max(0, (t.goal||4) - getWeekDoneCount(t, monday)); }
+function getDayStars(ds){
+  var stars = 0;
+  if(!checks[ds]) return 0;
+  Object.keys(checks[ds]).forEach(function(taskId){
+    var st = checks[ds][taskId];
+    if(!st) return;
+    var mult = getTaskMultiplier(taskId);
+    stars += getStateStars(st) * mult;
+  });
+  return Math.round(stars * 10) / 10;
+}
+function getDayTasks(dateStr){
+  var d = new Date(dateStr+'T00:00:00');
+  var dow = d.getDay();
+  var monday = getMonday(d);
+  var wk = weekKey(monday);
+  var expanded = getExpandedTasks(wk);
+  var result = [];
+  var addedIds = {};
+  expanded.forEach(function(t){
+    if(t.required){
+      if(isScheduled(t, dow)){ result.push(Object.assign({}, t, {isOverdue:false})); addedIds[t.id] = true; }
+      else {
+        for(var i = 1; i <= OVERDUE_DAYS; i++){
+          var pastDate = new Date(d);
+          pastDate.setDate(pastDate.getDate() - i);
+          var pastMonday = getMonday(pastDate);
+          if(pastMonday.getTime() !== monday.getTime()) break;
+          var pastDs = fmt(pastDate);
+          var pastDow = pastDate.getDay();
+          if(!isScheduled(t, pastDow)) continue;
+          var st = checks[pastDs] && checks[pastDs][t.id];
+          if(!(st && st !== 'none') && !addedIds[t.id]){ result.push(Object.assign({}, t, {isOverdue:true, overdueDays:i})); addedIds[t.id] = true; }
+        }
+      }
+    } else {
+      var remain = getOptionalRemain(t, monday);
+      if(remain > 0){ result.push(Object.assign({}, t, {remain: remain})); addedIds[t.id] = true; }
+    }
+  });
+  return result;
+}
+function isAllRequiredDone(dateStr){
+  var d = new Date(dateStr+'T00:00:00');
+  var dow = d.getDay();
+  var monday = getMonday(d);
+  var wk = weekKey(monday);
+  var expanded = getExpandedTasks(wk);
+  for(var i=0;i<expanded.length;i++){
+    var t = expanded[i];
+    if(!t.required) continue;
+    if(isScheduled(t, dow)){
+      var st = checks[dateStr] && checks[dateStr][t.id];
+      if(!st || st === 'none') return false;
+    }
+  }
+  return true;
+}
+
+function renderSidebar(){
+  document.getElementById('hStars').textContent = Math.round(totalStars*10)/10;
+  document.getElementById('hTickets').textContent = totalTickets;
+  document.getElementById('hBoss').textContent = Object.keys(bossDefeated).filter(function(k){return bossDefeated[k];}).length;
+  var wk = weekKey(curWeekMonday);
+  var d = homeworkData[wk] || {};
+  document.getElementById('hwYw').value = d.yw || '';
+  document.getElementById('hwSx').value = d.sx || '';
+  document.getElementById('hwYy').value = d.yy || '';
+  document.querySelectorAll('.sb-nav-item').forEach(function(item){
+    if(item.dataset.view === curView) item.classList.add('active');
+    else item.classList.remove('active');
+  });
+}
+function renderTimeline(){
+  var el = document.getElementById('timeline');
+  el.innerHTML = '';
+  var weekStars = 0;
+  for(var i=0;i<7;i++){
+    var d = addDays(curWeekMonday,i);
+    var ds = fmt(d);
+    var dayStars = getDayStars(ds);
+    weekStars += dayStars;
+    var chip = document.createElement('div');
+    chip.className = 'day-chip';
+    if(ds === fmt(curDate)) chip.classList.add('active');
+    if(isSameDay(d, today)) chip.classList.add('today');
+    chip.innerHTML = '<div class="d">'+d.getDate()+'</div><div>周'+dayName(d)+'</div><div class="day-stars">⭐ '+Math.round(dayStars*10)/10+'</div>';
+    chip.onclick = (function(dd){ return function(){
+      curDate = dd;
+      if(curView === 'week' || curView === 'report' || curView === 'data') curView = 'today';
+      renderAll();
+    }; })(d);
+    el.appendChild(chip);
+  }
+  var mon = curWeekMonday, sun = addDays(mon,6);
+  document.getElementById('weekLabel').textContent = (mon.getMonth()+1)+'/'+mon.getDate()+' - '+(sun.getMonth()+1)+'/'+sun.getDate()+' · ⭐ '+Math.round(weekStars*10)/10;
+}
+function renderTaskCard(t, ds){
+  var state = checks[ds] && checks[ds][t.id];
+  var checked = state !== undefined && state !== null && state !== 'none';
+  var monday = getMonday(new Date(ds+'T00:00:00'));
+  var doneCount = getWeekDoneCount(t, monday);
+  var card = document.createElement('div');
+  card.className = 'task-card' + (checked ? ' checked' : '') + (state === 'none' ? ' failed' : '');
+  var metaHtml = '';
+  if(t.required){ metaHtml += '<span class="m-item">📌 必做</span>'; }
+  else { var remain = getOptionalRemain(t, monday); metaHtml += '<span class="m-item m-optional">⭐ 选做 · 还差 <b>'+remain+'</b> 次</span>'; }
+  if(t.duration) metaHtml += '<span class="m-item">⏱️ <b>'+t.duration+'</b>分钟</span>';
+  var progressHtml = '';
+  if(t.required){
+    if(t.isOverdue) progressHtml = '<div style="font-size:10px;color:#dc2626;font-weight:800;margin-top:4px">⚠️ 补做 · '+t.overdueDays+'天前</div>';
+  } else {
+    var goal = t.goal || 4;
+    var pct = Math.min(100, Math.round(doneCount/goal*100));
+    progressHtml = '<div class="task-progress"><div class="task-progress-fill" style="width:'+pct+'%"></div></div>';
+  }
+  var tag = t.required ? '<span class="task-tag tag-required">必做</span>' : '<span class="task-tag tag-optional">选做</span>';
+  var starHtml = '';
+  if(state === 'full') starHtml = '<div class="star-check star-full">★</div>';
+  else if(state === 'half') starHtml = '<div class="star-check star-half">★</div>';
+  else if(state === 'quality') starHtml = '<div class="star-check star-quality">★</div>';
+  else if(state === 'none') starHtml = '<div class="star-check star-none">✗</div>';
+  else starHtml = '<div class="star-check star-empty">★</div>';
+  card.innerHTML = '<div class="task-card-top">'+starHtml+'<div class="task-info"><div class="task-name">'+escapeHtml(t.name)+tag+'</div><div class="task-meta">'+metaHtml+'</div>'+progressHtml+'</div></div>';
+  card.onclick = function(){ openStatePicker(ds, t.id); };
+  return card;
+}
+function renderToday(){
+  var el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  var ds = fmt(curDate);
+  var dayTasks = getDayTasks(ds);
+  if(dayTasks.length === 0){ el.innerHTML = '<div class="card"><div class="empty">今日无任务 · 休整待命 🌙</div></div>'; return; }
+  var order = ['语文','数学','英语','新地盘'];
+  var groups = {};
+  dayTasks.forEach(function(t){ if(!groups[t.subject]) groups[t.subject] = []; groups[t.subject].push(t); });
+  var wrap = document.createElement('div');
+  wrap.className = 'subject-columns';
+  order.forEach(function(subj){
+    if(!groups[subj]) return;
+    var groupTasks = groups[subj];
+    var block = document.createElement('div');
+    block.className = 'subject-block sj-'+subj;
+    var doneCount = 0;
+    groupTasks.forEach(function(t){ var st = checks[ds] && checks[ds][t.id]; if(st && st !== 'none') doneCount++; });
+    var head = document.createElement('div');
+    head.className = 'subject-head';
+    head.innerHTML = '<span>'+subj+'</span><span class="cnt">'+doneCount+'/'+groupTasks.length+'</span>';
+    block.appendChild(head);
+    groupTasks.forEach(function(t){ block.appendChild(renderTaskCard(t, ds)); });
+    wrap.appendChild(block);
+  });
+  el.appendChild(wrap);
+}
+function setTaskState(ds, taskId, newState){
+  if(!checks[ds]) checks[ds] = {};
+  var oldState = checks[ds][taskId];
+  var mult = getTaskMultiplier(taskId);
+  var oldStars = getStateStars(oldState) * mult;
+  if(newState === null){ delete checks[ds][taskId]; totalStars = Math.max(0, totalStars - oldStars); }
+  else { var newStars = getStateStars(newState) * mult; checks[ds][taskId] = newState; totalStars = Math.max(0, totalStars - oldStars + newStars); }
+  save(LS_CHECK, checks); save(LS_STARS, totalStars);
+  var allDone = isAllRequiredDone(ds);
+  if(allDone && !dailyTicketGiven[ds]){ dailyTicketGiven[ds] = true; totalTickets += 1; save(LS_DAILY_TICKET, dailyTicketGiven); save(LS_TICKETS, totalTickets); toast('🎟️ 今日任务全部完成！+1 张抽奖券'); }
+  renderAll();
+}
+function openStatePicker(ds, taskId){
+  closeStatePicker();
+  var currentState = checks[ds] && checks[ds][taskId];
+  var mult = getTaskMultiplier(taskId);
+  var states = [
+    { key:'full', icon:'⭐', label:'完整完成', stars:(1*mult)+' 颗星' },
+    { key:'half', icon:'🌗', label:'做了一半/尽力了', stars:(0.5*mult)+' 颗星' },
+    { key:'quality', icon:'⚠️', label:'完成但质量不达标', stars:(0.5*mult)+' 颗星' },
+    { key:'none', icon:'❌', label:'完全没动手', stars:'0 颗星' }
+  ];
+  var bd = document.createElement('div');
+  bd.id = 'statePickerBackdrop';
+  bd.className = 'state-picker-backdrop';
+  bd.onclick = closeStatePicker;
+  var picker = document.createElement('div');
+  picker.id = 'statePicker';
+  picker.className = 'state-picker';
+  var html = '<div class="state-picker-title">选择完成等级</div>';
+  states.forEach(function(s){ html += '<div class="state-option '+(currentState === s.key ? 'active' : '')+'" data-state="'+s.key+'"><span class="state-icon">'+s.icon+'</span><span class="state-label">'+s.label+'</span><span class="state-stars">'+s.stars+'</span></div>'; });
+  if(currentState) html += '<div class="state-option state-clear" data-state="">✖ 清除状态</div>';
+  picker.innerHTML = html;
+  picker.querySelectorAll('.state-option').forEach(function(opt){
+    opt.onclick = function(){
+      var newState = opt.dataset.state;
+      if(newState === '' || newState === currentState) setTaskState(ds, taskId, null);
+      else setTaskState(ds, taskId, newState);
+      closeStatePicker();
+    };
+  });
+  document.body.appendChild(bd);
+  document.body.appendChild(picker);
+}
+function closeStatePicker(){
+  var p = document.getElementById('statePicker');
+  var b = document.getElementById('statePickerBackdrop');
+  if(p) p.remove();
+  if(b) b.remove();
+}
+function renderWeekView(){
+  var el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  var wk = weekKey(curWeekMonday);
+  var expanded = getExpandedTasks(wk);
+  var card = document.createElement('div');
+  card.className = 'card';
+  var html = '<h3>📅 本周总览</h3>';
+  var order = ['语文','数学','英语','新地盘'];
+  order.forEach(function(subj){
+    var sjTasks = expanded.filter(function(t){ return t.subject === subj; });
+    if(sjTasks.length === 0) return;
+    html += '<div style="margin-bottom:14px;padding-bottom:10px;border-bottom:2px dashed #eff6ff"><div style="font-size:14px;font-weight:900;color:#1e40af;margin-bottom:6px">'+subj+'</div>';
+    sjTasks.forEach(function(t){
+      html += '<div class="wg-row"><div class="wn">'+escapeHtml(t.name)+'</div><div class="wg-dots">';
+      for(var i=0;i<7;i++){
+        var d = addDays(curWeekMonday, i);
+        var ds = fmt(d);
+        var sched = isScheduled(t, d.getDay());
+        var st = checks[ds] && checks[ds][t.id];
+        var done = st && st !== 'none';
+        var cls = 'wg-dot'; var txt = '·';
+        if(!sched){ cls += ' rest'; txt = '—'; }
+        else if(done){ cls += ' ok'; txt = st === 'full' ? '★' : '½'; }
+        html += '<div class="'+cls+'">'+txt+'</div>';
+      }
+      html += '</div></div>';
+    });
+    html += '</div>';
+  });
+  card.innerHTML = html;
+  el.appendChild(card);
+}
+function renderReportView(){
+  var el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  var wk = weekKey(curWeekMonday);
+  var expanded = getExpandedTasks(wk);
+  var totalScheduled = 0, totalDone = 0;
+  var countFull = 0, countHalf = 0, countQuality = 0, countNone = 0;
+  var totalStarEarned = 0, totalStudyMin = 0;
+  for(var i=0;i<7;i++){
+    var d = addDays(curWeekMonday,i);
+    var dow = d.getDay();
+    expanded.forEach(function(t){ if(t.required && isScheduled(t, dow)) totalScheduled++; });
+  }
+  var taskStats = [];
+  expanded.forEach(function(t){
+    var planCount = 0, doneCount = 0, tStars = 0, tMinutes = 0;
+    for(var i=0;i<7;i++){
+      var d = addDays(curWeekMonday, i);
+      var ds = fmt(d);
+      var dow = d.getDay();
+      if(isScheduled(t, dow)) planCount++;
+      var st = checks[ds] && checks[ds][t.id];
+      if(!st) continue;
+      var mult = getTaskMultiplier(t.id);
+      var stars = getStateStars(st) * mult;
+      tStars += stars; totalStarEarned += stars;
+      if(st === 'full'){ countFull++; doneCount++; }
+      else if(st === 'half'){ countHalf++; doneCount++; }
+      else if(st === 'quality'){ countQuality++; doneCount++; }
+      else if(st === 'none'){ countNone++; }
+      if(st !== 'none' && t.duration){ tMinutes += t.duration; totalStudyMin += t.duration; }
+      if(t.required && isScheduled(t, dow) && st !== 'none') totalDone++;
+    }
+    var achieved = false, targetText = '';
+    if(t.required){ achieved = (planCount > 0) && (doneCount >= planCount); targetText = '必做 '+doneCount+'/'+planCount+' 次'; }
+    else { var goal = t.goal || 4; achieved = doneCount >= goal; targetText = '选做 '+doneCount+'/'+goal+' 次'; }
+    taskStats.push({name:t.name, doneCount:doneCount, planCount:planCount, minutes:tMinutes, stars:Math.round(tStars*10)/10, achieved:achieved, targetText:targetText});
+  });
+  var rate = totalScheduled ? Math.round(totalDone / totalScheduled * 100) : 0;
+  var hours = Math.floor(totalStudyMin/60);
+  var mins = totalStudyMin % 60;
+  var timeText = hours > 0 ? (hours+' 小时 '+mins+' 分') : (mins+' 分钟');
+  var doneTasks = taskStats.filter(function(s){ return s.achieved; });
+  var undoneTasks = taskStats.filter(function(s){ return !s.achieved; });
+  var monD = curWeekMonday, sunD = addDays(monD, 6);
+  var dateRange = (monD.getMonth()+1)+'月'+monD.getDate()+'日 - '+(sunD.getMonth()+1)+'月'+sunD.getDate()+'日';
+  var html = '<div class="report-title-row"><div class="report-title">📊 本周学习报告（'+dateRange+'）</div></div>';
+  html += '<div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:10px"><div style="font-size:12px;font-weight:900;color:#1e40af;margin-bottom:4px">📊 完成率</div><div style="font-size:28px;font-weight:900;color:#2563eb">'+rate+'%</div><div style="font-size:11px;color:#64748b;font-weight:800;margin-top:4px">（'+totalDone+'/'+totalScheduled+'次）</div></div>';
+  html += '<div style="background:#fef3c7;border:2px solid #fcd34d;border-radius:12px;padding:12px;margin-bottom:10px"><div style="font-size:12px;font-weight:900;color:#92400e;margin-bottom:4px">⭐ 获得星星</div><div style="font-size:28px;font-weight:900;color:#f59e0b;margin-bottom:10px">'+Math.round(totalStarEarned*10)/10+' 颗</div><div style="display:flex;gap:6px"><div style="flex:1;background:#fff;border-radius:8px;padding:6px 4px;text-align:center"><div style="font-size:16px;font-weight:900;color:#fbbf24">'+countFull+'</div><div style="font-size:10px;color:#92400e;font-weight:800">满星</div></div><div style="flex:1;background:#fff;border-radius:8px;padding:6px 4px;text-align:center"><div style="font-size:16px;font-weight:900;color:#f59e0b">'+countHalf+'</div><div style="font-size:10px;color:#92400e;font-weight:800">半星</div></div><div style="flex:1;background:#fff;border-radius:8px;padding:6px 4px;text-align:center"><div style="font-size:16px;font-weight:900;color:#d97706">'+countQuality+'</div><div style="font-size:10px;color:#92400e;font-weight:800">质量</div></div><div style="flex:1;background:#fff;border-radius:8px;padding:6px 4px;text-align:center"><div style="font-size:16px;font-weight:900;color:#dc2626">'+countNone+'</div><div style="font-size:10px;color:#92400e;font-weight:800">未做</div></div></div><div style="font-size:11px;color:#92400e;font-weight:800;margin-top:8px;text-align:center">⏱ '+timeText+'</div></div>';
+  html += '<div style="font-size:13px;font-weight:900;color:#1e40af;margin:12px 0 6px">📋 各任务明细</div>';
+  if(doneTasks.length > 0){
+    html += '<div style="font-size:12px;font-weight:900;color:#15803d;margin-bottom:4px">✅ 已完成（'+doneTasks.length+'）</div>';
+    doneTasks.forEach(function(s){
+      html += '<div style="padding:10px 12px;background:#f0fdf4;border-radius:10px;margin-bottom:4px;border:2px solid #86efac"><div style="font-size:13px;font-weight:900;color:#1e3a5f">'+escapeHtml(s.name)+' <span style="color:#15803d;font-size:11px">✅</span></div><div style="font-size:11px;color:#94a3b8;margin-top:2px;font-weight:700">'+s.targetText+' · ⭐'+s.stars+'</div></div>';
+    });
+  }
+  if(undoneTasks.length > 0){
+    html += '<div style="font-size:12px;font-weight:900;color:#dc2626;margin:10px 0 4px">⚠️ 未完成（'+undoneTasks.length+'）</div>';
+    undoneTasks.forEach(function(s){
+      html += '<div style="padding:10px 12px;background:#fef2f2;border-radius:10px;margin-bottom:4px;border:2px solid #fca5a5"><div style="font-size:13px;font-weight:900;color:#1e3a5f">'+escapeHtml(s.name)+' <span style="color:#dc2626;font-size:11px">⚠</span></div><div style="font-size:11px;color:#94a3b8;margin-top:2px;font-weight:700">'+s.targetText+' · ⭐'+s.stars+'</div></div>';
+    });
+  }
+  var note = weeklyNotes[wk] || {};
+  html += '<div style="margin-top:14px;padding-top:12px;border-top:2px dashed #dbeafe"><label>👍 做得好的地方</label><textarea id="wrGood">'+escapeHtml(note.good||'')+'</textarea><label>🔧 需要改进的点</label><textarea id="wrBad">'+escapeHtml(note.bad||'')+'</textarea><label>📌 下周计划</label><textarea id="wrNext">'+escapeHtml(note.next||'')+'</textarea><button class="btn btn-primary" style="width:100%;margin-top:6px" id="saveWeekly">保存复盘</button></div>';
+  card.innerHTML = html;
+  el.appendChild(card);
+  document.getElementById('saveWeekly').onclick = function(){
+    weeklyNotes[wk] = {good:document.getElementById('wrGood').value, bad:document.getElementById('wrBad').value, next:document.getElementById('wrNext').value};
+    save(LS_WEEKLY, weeklyNotes);
+    toast('✅ 复盘已保存');
+  };
+}
+var BOSS_CONFIG = {
+  0:{name:'吃光时间大魔王',emoji:'👹',desc:'别让周末时光被偷走！'},
+  1:{name:'启动困难巨兽',emoji:'🐉',desc:'周一最难的是启动！'},
+  2:{name:'知识守卫者',emoji:'👾',desc:'突破它才能拿到新进度！'},
+  3:{name:'忘光光',emoji:'👻',desc:'好好巩固学过的内容！'},
+  4:{name:'智慧巨龙',emoji:'🐲',desc:'巨龙的宝藏就是知识！'},
+  5:{name:'我的胜利我做主',emoji:'🦸',desc:'今天你说了算！'},
+  6:{name:'大懒虫',emoji:'🦥',desc:'战胜大懒虫！'}
+};
+function getBossConfig(ds){ var dow = new Date(ds+'T00:00:00').getDay(); return BOSS_CONFIG[dow] || BOSS_CONFIG[1]; }
+function renderBossView(){
+  var el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  var ds = fmt(curDate);
+  var allTasks = getDayTasks(ds);
+  var bossOnlyTasks = allTasks.filter(function(t){
+    var parentId = t.id.split('#')[0];
+    var parent = tasks.find(function(x){ return x.id === parentId; });
+    return parent && parent.bossOnly;
+  });
+  var useTasks = bossOnlyTasks.length > 0 ? bossOnlyTasks : allTasks;
+  var card = document.createElement('div');
+  card.className = 'card';
+  if(useTasks.length === 0){ card.innerHTML = '<div class="empty">今日没有任务，无法挑战 BOSS</div>'; el.appendChild(card); return; }
+  var done = 0;
+  useTasks.forEach(function(t){ var st = checks[ds] && checks[ds][t.id]; if(st && st !== 'none') done++; });
+  var total = useTasks.length;
+  var hpPct = Math.round((1 - done/total) * 100);
+  var ready = (done === total);
+  var def = !!bossDefeated[ds];
+  var boss = getBossConfig(ds);
+  card.innerHTML = '<div class="boss-card"><div style="font-size:12px;color:#fff;letter-spacing:2px;margin-bottom:6px">'+(bossOnlyTasks.length>0?'⚔️ BOSS 专属':'⚔️ 今日全部任务')+'</div><div class="boss-emoji">'+(def?'💀':boss.emoji)+'</div><div class="boss-name">'+(def?'已击败':boss.name)+'</div>'+(def?'':'<div style="font-size:12px;color:#fff;margin-bottom:8px">'+boss.desc+'</div>')+'<div style="font-size:12px;color:#fff;margin-top:8px;font-weight:800">HP '+hpPct+'%</div><div class="boss-hp-bg"><div class="boss-hp-fill" style="width:'+hpPct+'%"></div></div><div style="font-size:12px;color:#fff;margin-top:6px;font-weight:800">已击败 '+done+'/'+total+'</div><button class="boss-btn '+(ready&&!def?'ready':'')+'" id="bossBtn" '+(ready&&!def?'':'disabled')+'>'+(def?'✅ 已击败':(ready?'⚔️ 发起攻击':'还有任务没完成'))+'</button></div>';
+  el.appendChild(card);
+  var btn = document.getElementById('bossBtn');
+  if(btn && ready && !def){
+    btn.onclick = function(){
+      if(prizes.length > 0){
+        var totalWeight = 0;
+        prizes.forEach(function(p){ totalWeight += (p.weight || 10); });
+        var r = Math.random() * totalWeight;
+        var picked = prizes[0];
+        for(var i=0;i<prizes.length;i++){ r -= (prizes[i].weight || 10); if(r <= 0){ picked = prizes[i]; break; } }
+        var color = picked.color || '#94a3b8';
+        prizeInventory.push({instanceId:'boss'+Date.now(), prizeId:picked.id, name:picked.name, rarity:picked.rarity, color:color, cost:picked.cost||10, wonAt:new Date().toISOString()});
+        save(LS_PRIZE_INVENTORY, prizeInventory);
+      }
+      bossDefeated[ds] = true;
+      totalTickets += 2;
+      save(LS_BOSS, bossDefeated); save(LS_TICKETS, totalTickets);
+      confettiBig();
+      toast('⚔️ BOSS 已击败！+2 张抽奖券');
+      renderAll();
+    };
+  }
+}
+function renderDataView(){
+  var el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  var wk = weekKey(curWeekMonday);
+  var expanded = getExpandedTasks(wk);
+  var totalScheduled = 0, totalDone = 0;
+  for(var i=0;i<7;i++){
+    var d = addDays(curWeekMonday,i);
+    var ds = fmt(d);
+    var dow = d.getDay();
+    expanded.forEach(function(t){
+      if(t.required && isScheduled(t, dow)){ totalScheduled++; var st = checks[ds] && checks[ds][t.id]; if(st && st !== 'none') totalDone++; }
+    });
+  }
+  var rate = totalScheduled ? Math.round(totalDone / totalScheduled * 100) : 0;
+  var leaves = Math.round((rate / 100) * 20);
+  var treeEmoji = '🌰', stage = '种子';
+  if(leaves === 0){ treeEmoji = '🌰'; stage = '种子'; }
+  else if(leaves <= 4){ treeEmoji = '🌱'; stage = '嫩芽'; }
+  else if(leaves <= 9){ treeEmoji = '🌿'; stage = '小苗'; }
+  else if(leaves <= 14){ treeEmoji = '🪴'; stage = '小树'; }
+  else if(leaves < 20){ treeEmoji = '🌳'; stage = '大树'; }
+  else { treeEmoji = '🌳'; stage = '✨ 参天大树 ✨'; }
+  var card1 = document.createElement('div');
+  card1.className = 'card';
+  var leafHtml = '';
+  for(var i=0;i<20;i++){
+    var has = i < leaves;
+    leafHtml += '<span style="display:inline-block;font-size:16px;width:18px;text-align:center;filter:'+(has?'none':'grayscale(1)')+';opacity:'+(has?'1':'.18')+'">🍃</span>';
+  }
+  card1.innerHTML = '<h3>🌳 能量树</h3><div style="text-align:center;padding:12px 0"><div style="font-size:76px;margin-bottom:8px">'+treeEmoji+'</div><div style="font-size:16px;font-weight:900;color:#2563eb;letter-spacing:3px">'+stage+'</div><div style="font-size:13px;color:#64748b;margin-top:6px;font-weight:800">完成率 '+rate+'% · '+leaves+'/20 叶子</div><div style="margin-top:12px">'+leafHtml+'</div></div>';
+  el.appendChild(card1);
+  var card3 = document.createElement('div');
+  card3.className = 'card';
+  var sHtml = '<h3>📊 各科进度（本周）</h3>';
+  var subjects = ['语文','数学','英语','新地盘'];
+  var colors = {'语文':'#dc2626','数学':'#d97706','英语':'#16a34a','新地盘':'#7c3aed'};
+  subjects.forEach(function(sj){
+    var sjTasks = expanded.filter(function(t){ return t.subject === sj; });
+    if(sjTasks.length === 0) return;
+    var scheduled = 0, done = 0;
+    for(var i=0;i<7;i++){
+      var d = addDays(curWeekMonday,i);
+      var ds = fmt(d);
+      var dow = d.getDay();
+      sjTasks.forEach(function(t){ if(isScheduled(t, dow)){ scheduled++; var st = checks[ds] && checks[ds][t.id]; if(st && st !== 'none') done++; } });
+    }
+    var pct = scheduled ? Math.min(100, Math.round(done/scheduled*100)) : 0;
+    sHtml += '<div class="pbar-row"><div class="pbar-label"><span>'+sj+'</span><span>'+done+'/'+scheduled+' · '+pct+'%</span></div><div class="pbar-bg"><div class="pbar-fill" style="width:'+pct+'%;background:'+colors[sj]+'"></div></div></div>';
+  });
+  card3.innerHTML = sHtml;
+  el.appendChild(card3);
+}
+function renderDrawView(){
+  var el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  var ds = fmt(curDate);
+  var allRequiredDone = isAllRequiredDone(ds);
+  var card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h3>🎰 盲盒抽奖</h3><div style="text-align:center;padding:12px 0"><div style="font-size:68px;margin-bottom:12px">🎁</div><div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px"><div style="flex:1;max-width:140px;background:#eff6ff;border:2px solid #93c5fd;border-radius:12px;padding:10px 8px"><div style="font-size:12px;color:#64748b;font-weight:800">🎟️ 抽奖券</div><div style="font-size:22px;font-weight:900;color:#2563eb;margin-top:4px">'+totalTickets+'</div></div><div style="flex:1;max-width:140px;background:#fef3c7;border:2px solid #fcd34d;border-radius:12px;padding:10px 8px"><div style="font-size:12px;color:#92400e;font-weight:800">⭐ 星星</div><div style="font-size:22px;font-weight:900;color:#f59e0b;margin-top:4px">'+Math.round(totalStars*10)/10+'</div></div></div><button class="btn btn-primary" id="drawBtn" style="font-size:15px;padding:14px 40px;width:100%;max-width:280px;margin-bottom:10px" '+(allRequiredDone?'':'disabled')+'>'+(allRequiredDone?'🎰 开启盲盒':'🔒 今日任务未完成')+'</button><button class="btn btn-ghost" id="exchangeBtn" style="width:100%;max-width:280px">⭐ 5 星兑换 1 张抽奖券</button></div>';
+  el.appendChild(card);
+  var btn = document.getElementById('drawBtn');
+  if(btn && allRequiredDone) btn.onclick = doDraw;
+  var exBtn = document.getElementById('exchangeBtn');
+  if(exBtn) exBtn.onclick = function(){
+    if(totalStars < 5){ toast('⭐ 星星不足 5 颗'); return; }
+    var n = Math.floor(totalStars / 5);
+    totalStars = Math.round((totalStars - n * 5) * 10) / 10;
+    totalTickets += n;
+    save(LS_STARS, totalStars); save(LS_TICKETS, totalTickets);
+    toast('✅ 兑换了 '+n+' 张抽奖券');
+    renderAll();
+  };
+}
+function doDraw(){
+  if(totalTickets < 1){ toast('🎟️ 抽奖券不足'); return; }
+  if(prizes.length === 0){ toast('奖池是空的'); return; }
+  totalTickets -= 1;
+  save(LS_TICKETS, totalTickets);
+  var totalWeight = 0;
+  prizes.forEach(function(p){ totalWeight += (p.weight || 10); });
+  var r = Math.random() * totalWeight;
+  var picked = prizes[0];
+  for(var i=0;i<prizes.length;i++){ r -= (prizes[i].weight || 10); if(r <= 0){ picked = prizes[i]; break; } }
+  var color = picked.color || '#94a3b8';
+  var instance = {instanceId:'inv'+Date.now()+'_'+Math.floor(Math.random()*1000), prizeId:picked.id, name:picked.name, rarity:picked.rarity, color:color, cost:picked.cost||10, wonAt:new Date().toISOString()};
+  prizeInventory.push(instance);
+  save(LS_PRIZE_INVENTORY, prizeInventory);
+  confettiBig();
+  var body = document.getElementById('resultBody');
+  body.innerHTML = '<div style="font-size:56px;margin-bottom:10px">🎁</div><div style="font-size:14px;color:#64748b;font-weight:800;margin-bottom:6px">恭喜抽中！</div><div style="font-size:20px;font-weight:900;color:'+color+'">'+escapeHtml(instance.name)+'</div><div style="margin-top:10px"><span style="background:'+color+';color:#fff;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:900">'+instance.rarity+'</span></div><div style="margin-top:12px;padding:10px;background:#fef3c7;border-radius:10px;font-size:12px;color:#92400e;font-weight:800">⭐ 攒够 '+instance.cost+' 颗星星即可兑换</div>';
+  document.getElementById('modalResult').classList.add('show');
+  renderAll();
+}
+function renderPrizeView(){
+  var el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  var card = document.createElement('div');
+  card.className = 'card';
+  var html = '<div class="report-title-row"><div class="report-title">🎁 奖品库</div><div style="font-size:14px;font-weight:900;color:#f59e0b">⭐ '+Math.round(totalStars*10)/10+'</div></div>';
+  html += '<div style="display:flex;gap:6px;margin-bottom:12px;border-bottom:2px dashed #dbeafe"><button class="prize-tab-btn" data-tab="inventory" style="flex:1;padding:10px 6px;border:none;background:transparent;font-size:13px;font-weight:900;color:'+(prizeTab==='inventory'?'#2563eb':'#94a3b8')+';border-bottom:3px solid '+(prizeTab==='inventory'?'#3b82f6':'transparent')+';cursor:pointer">🎁 我的奖品 ('+prizeInventory.length+')</button><button class="prize-tab-btn" data-tab="pool" style="flex:1;padding:10px 6px;border:none;background:transparent;font-size:13px;font-weight:900;color:'+(prizeTab==='pool'?'#2563eb':'#94a3b8')+';border-bottom:3px solid '+(prizeTab==='pool'?'#3b82f6':'transparent')+';cursor:pointer">⚙️ 奖池 ('+prizes.length+')</button></div>';
+  if(prizeTab === 'inventory'){
+    if(prizeInventory.length === 0) html += '<div class="empty">还没有抽到任何奖品</div>';
+    else {
+      prizeInventory.forEach(function(item){
+        var color = item.color;
+        var canExchange = totalStars >= item.cost;
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:12px;background:'+(canExchange?'#f0fdf4':'#f8fafc')+';border:2px solid '+(canExchange?'#86efac':'#e2e8f0')+';border-radius:12px;margin-bottom:8px"><span class="prize-color-dot" style="background:'+color+'"></span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:900;color:#1e3a5f">'+escapeHtml(item.name)+'</div><div style="font-size:11px;color:#64748b;margin-top:3px;font-weight:700"><span style="background:'+color+';color:#fff;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:900">'+item.rarity+'</span><span style="margin-left:8px;color:#f59e0b;font-weight:900">⭐ '+item.cost+' 颗</span></div></div><button data-exchange="'+item.instanceId+'" style="border:none;background:'+(canExchange?'#22c55e':'#f1f5f9')+';color:'+(canExchange?'#fff':'#94a3b8')+';border-radius:10px;padding:8px 14px;font-size:12px;font-weight:900;cursor:'+(canExchange?'pointer':'not-allowed')+';min-height:40px" '+(canExchange?'':'disabled')+'>兑换</button><button data-remove="'+item.instanceId+'" style="border:2px solid #fca5a5;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:900;cursor:pointer;min-height:40px">✕</button></div>';
+      });
+    }
+  } else {
+    if(prizes.length === 0) html += '<div class="empty">奖池还没有奖品</div>';
+    else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#eff6ff"><th style="padding:8px 6px;text-align:left;font-weight:900;color:#1e40af;border-bottom:2px solid #93c5fd">奖品</th><th style="padding:8px 4px;text-align:center;font-weight:900;color:#1e40af;border-bottom:2px solid #93c5fd;width:50px">等级</th><th style="padding:8px 4px;text-align:center;font-weight:900;color:#1e40af;border-bottom:2px solid #93c5fd;width:36px">权重</th><th style="padding:8px 4px;text-align:center;font-weight:900;color:#1e40af;border-bottom:2px solid #93c5fd;width:36px">星星</th><th style="padding:8px 4px;text-align:center;font-weight:900;color:#1e40af;border-bottom:2px solid #93c5fd;width:70px">操作</th></tr></thead><tbody>';
+      prizes.forEach(function(p){
+        var color = p.color || '#94a3b8';
+        html += '<tr style="border-bottom:1px solid #eff6ff"><td style="padding:8px 6px;font-weight:800;color:#1e3a5f"><span class="prize-color-dot" style="background:'+color+'"></span>'+escapeHtml(p.name)+'</td><td style="padding:8px 4px;text-align:center"><span style="background:'+color+';color:#fff;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:900">'+p.rarity+'</span></td><td style="padding:8px 4px;text-align:center;font-weight:800;color:#64748b">'+(p.weight||10)+'</td><td style="padding:8px 4px;text-align:center;font-weight:900;color:#f59e0b">'+(p.cost||10)+'</td><td style="padding:8px 4px;text-align:center"><button data-edit="'+p.id+'" style="border:2px solid #93c5fd;background:#eff6ff;color:#2563eb;border-radius:8px;padding:5px 7px;font-size:11px;font-weight:900;cursor:pointer;margin-right:3px">✏️</button><button data-del="'+p.id+'" style="border:2px solid #fca5a5;background:#fef2f2;color:#dc2626;border-radius:8px;padding:5px 7px;font-size:11px;font-weight:900;cursor:pointer">✕</button></td></tr>';
+      });
+      html += '</tbody></table><button class="btn btn-primary" id="addPrizeBtn" style="width:100%;margin-top:10px">➕ 新增奖品</button>';
+    }
+  }
+  card.innerHTML = html;
+  el.appendChild(card);
+  card.querySelectorAll('.prize-tab-btn').forEach(function(btn){ btn.onclick = function(){ prizeTab = btn.dataset.tab; renderPrizeView(); }; });
+  card.querySelectorAll('[data-exchange]').forEach(function(btn){
+    btn.onclick = function(){
+      var id = btn.dataset.exchange;
+      var item = prizeInventory.find(function(x){ return x.instanceId === id; });
+      if(!item) return;
+      if(totalStars < item.cost){ toast('⭐ 星星不足'); return; }
+      showConfirm('用 '+item.cost+' 颗星星兑换「'+item.name+'」？', function(){
+        totalStars = Math.round((totalStars - item.cost) * 10) / 10;
+        prizeInventory = prizeInventory.filter(function(x){ return x.instanceId !== id; });
+        save(LS_STARS, totalStars); save(LS_PRIZE_INVENTORY, prizeInventory);
+        confettiBig(); toast('🎁 兑换成功'); renderAll();
+      }, {icon:'🎁', okText:'兑换'});
+    };
+  });
+  card.querySelectorAll('[data-remove]').forEach(function(btn){
+    btn.onclick = function(){
+      var id = btn.dataset.remove;
+      var item = prizeInventory.find(function(x){ return x.instanceId === id; });
+      if(!item) return;
+      showConfirm('确定放弃「'+item.name+'」吗？', function(){
+        prizeInventory = prizeInventory.filter(function(x){ return x.instanceId !== id; });
+        save(LS_PRIZE_INVENTORY, prizeInventory); renderAll();
+      }, {icon:'🗑️', okText:'放弃'});
+    };
+  });
+  card.querySelectorAll('[data-del]').forEach(function(btn){
+    btn.onclick = function(){
+      var id = btn.dataset.del;
+      var p = prizes.find(function(x){ return x.id === id; });
+      if(!p) return;
+      showConfirm('确定删除「'+p.name+'」吗？', function(){
+        prizes = prizes.filter(function(x){ return x.id !== id; });
+        save(LS_PRIZE, prizes); renderAll();
+      }, {icon:'🗑️', okText:'删除'});
+    };
+  });
+  card.querySelectorAll('[data-edit]').forEach(function(btn){ btn.onclick = function(){ openPrizeModal(btn.dataset.edit); }; });
+  var addBtn = document.getElementById('addPrizeBtn');
+  if(addBtn) addBtn.onclick = function(){ openPrizeModal(null); };
+}
+var editingPrizeId = null;
+function openPrizeModal(id){
+  editingPrizeId = id || null;
+  var title = document.getElementById('prizeModalTitle');
+  if(id){
+    var p = prizes.find(function(x){ return x.id === id; });
+    if(p){
+      title.textContent = '✏️ 编辑奖品';
+      document.getElementById('pName').value = p.name;
+      document.getElementById('pRarity').value = p.rarity;
+      document.getElementById('pWeight').value = p.weight || 10;
+      document.getElementById('pColor').value = p.color || '#94a3b8';
+      document.getElementById('pCost').value = p.cost || 10;
+      document.getElementById('prizeDelete').style.display = 'block';
+    }
+  } else {
+    title.textContent = '➕ 新增奖品';
+    document.getElementById('pName').value = '';
+    document.getElementById('pRarity').value = '普通';
+    document.getElementById('pWeight').value = 60;
+    document.getElementById('pColor').value = '#94a3b8';
+    document.getElementById('pCost').value = 10;
+    document.getElementById('prizeDelete').style.display = 'none';
+  }
+  document.getElementById('modalPrize').classList.add('show');
+}
+function renderSettingsView(){
+  var el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  var card = document.createElement('div');
+  card.className = 'card';
+  var taskListHtml = '<h3>📋 任务列表</h3>';
+  tasks.forEach(function(t){
+    var tag = t.required ? '<span class="task-tag tag-required">必做</span>' : '<span class="task-tag tag-optional">选做</span>';
+    taskListHtml += '<div class="prize-item"><div class="pn">'+escapeHtml(t.subject)+' · '+escapeHtml(t.name)+tag+'</div><button data-edit="'+t.id+'" style="border:2px solid #93c5fd;background:#eff6ff;color:#2563eb;margin-right:4px">编辑</button><button data-deltask="'+t.id+'">删除</button></div>';
+  });
+  taskListHtml += '<button class="btn btn-primary" id="addTaskBtn" style="width:100%;margin-top:10px">➕ 新增任务</button>';
+  card.innerHTML = taskListHtml;
+  el.appendChild(card);
+  card.querySelectorAll('[data-edit]').forEach(function(btn){ btn.onclick = function(){ openTaskModal(btn.dataset.edit); }; });
+  card.querySelectorAll('[data-deltask]').forEach(function(btn){
+    btn.onclick = function(){
+      var id = btn.dataset.deltask;
+      showConfirm('确定删除这个任务吗？', function(){
+        tasks = tasks.filter(function(t){ return t.id !== id; });
+        Object.keys(checks).forEach(function(d){
+          Object.keys(checks[d]).forEach(function(k){ if(k === id || k.indexOf(id + '#') === 0) delete checks[d][k]; });
+        });
+        save(LS_TASKS, tasks); save(LS_CHECK, checks); renderAll();
+      }, {icon:'🗑️', okText:'删除'});
+    };
+  });
+  document.getElementById('addTaskBtn').onclick = function(){ openTaskModal(null); };
+  var card2 = document.createElement('div');
+  card2.className = 'card';
+  card2.innerHTML = '<h3>💾 数据备份</h3><button class="btn btn-ghost" id="btnExport" style="width:100%;margin-bottom:8px">⬇️ 导出备份</button><button class="btn btn-ghost" id="btnImport" style="width:100%">⬆️ 导入备份</button><input type="file" id="importFile" accept=".json" style="display:none">';
+  el.appendChild(card2);
+  document.getElementById('btnExport').onclick = function(){
+    var data = {tasks:tasks, checks:checks, prizes:prizes, weeklyNotes:weeklyNotes, totalStars:totalStars, totalTickets:totalTickets, bossDefeated:bossDefeated, homeworkData:homeworkData, prizeInventory:prizeInventory, actualTimes:actualTimes};
+    var blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'Derek备份_'+fmt(new Date())+'.json';
+    a.click(); URL.revokeObjectURL(url);
+    toast('✅ 备份已导出');
+  };
+  document.getElementById('btnImport').onclick = function(){ document.getElementById('importFile').click(); };
+  document.getElementById('importFile').onchange = function(e){
+    var file = e.target.files[0]; if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        var data = JSON.parse(ev.target.result);
+        if(data.tasks) tasks = data.tasks;
+        if(data.checks) checks = data.checks;
+        if(data.prizes) prizes = data.prizes;
+        if(data.weeklyNotes) weeklyNotes = data.weeklyNotes;
+        if(typeof data.totalStars === 'number') totalStars = data.totalStars;
+        if(typeof data.totalTickets === 'number') totalTickets = data.totalTickets;
+        if(data.bossDefeated) bossDefeated = data.bossDefeated;
+        if(data.homeworkData) homeworkData = data.homeworkData;
+        if(data.prizeInventory) prizeInventory = data.prizeInventory;
+        if(data.actualTimes) actualTimes = data.actualTimes;
+        save(LS_TASKS, tasks); save(LS_CHECK, checks); save(LS_PRIZE, prizes);
+        save(LS_WEEKLY, weeklyNotes); save(LS_STARS, totalStars);
+        save(LS_TICKETS, totalTickets); save(LS_BOSS, bossDefeated);
+        save(LS_HOMEWORK, homeworkData); save(LS_PRIZE_INVENTORY, prizeInventory);
+        save(LS_ACTUAL, actualTimes);
+        renderAll(); toast('✅ 备份已导入');
+      } catch(err){ toast('❌ 文件格式不对'); }
+    };
+    reader.readAsText(file); e.target.value = '';
+  };
+}
+function renderSeasonView(){
+  var el = document.getElementById('mainContent');
+  el.innerHTML = '';
+  var now = new Date();
+  var m = now.getMonth() + 1, y = now.getFullYear();
+  var seasonName, seasonStart, seasonEnd;
+  if(m >= 2 && m <= 7){ seasonName = y + ' 春季学期'; seasonStart = new Date(y, 1, 1); seasonEnd = new Date(y, 6, 31); }
+  else if(m >= 8){ seasonName = y + '-' + (y+1) + ' 秋季学期'; seasonStart = new Date(y, 7, 1); seasonEnd = new Date(y+1, 0, 31); }
+  else { seasonName = (y-1) + '-' + y + ' 秋季学期'; seasonStart = new Date(y-1, 7, 1); seasonEnd = new Date(y, 0, 31); }
+  var seasonStars = 0;
+  var d = new Date(seasonStart);
+  while(d.getTime() <= seasonEnd.getTime()){
+    var ds = fmt(d);
+    if(checks[ds]){
+      Object.keys(checks[ds]).forEach(function(taskId){
+        var st = checks[ds][taskId];
+        if(!st || st === 'none') return;
+        var mult = getTaskMultiplier(taskId);
+        seasonStars += getStateStars(st) * mult;
+      });
+    }
+    d = addDays(d, 1);
+  }
+  seasonStars = Math.round(seasonStars * 10) / 10;
+  var TITLES = [
+    {min:0, name:'冒险新手', emoji:'🐣', color:'#94a3b8'},
+    {min:31, name:'初级冒险家', emoji:'🌱', color:'#22c55e'},
+    {min:81, name:'熟练冒险家', emoji:'🍀', color:'#0ea5e9'},
+    {min:151, name:'精英冒险家', emoji:'⚔️', color:'#6366f1'},
+    {min:301, name:'大师冒险家', emoji:'🏅', color:'#a855f7'},
+    {min:601, name:'传说冒险王', emoji:'👑', color:'#f59e0b'}
+  ];
+  var title = TITLES[0];
+  TITLES.forEach(function(t){ if(seasonStars >= t.min) title = t; });
+  var card1 = document.createElement('div');
+  card1.className = 'card';
+  card1.innerHTML = '<h3>🏆 ' + seasonName + '</h3><div style="text-align:center;padding:16px 0"><div style="font-size:64px;margin-bottom:8px">' + title.emoji + '</div><div style="font-size:22px;font-weight:900;color:' + title.color + ';letter-spacing:2px">' + title.name + '</div><div style="font-size:13px;color:#64748b;margin-top:8px;font-weight:800">累计 <b style="color:#f59e0b;font-size:16px">' + seasonStars + '</b> 颗星</div></div>';
+  el.appendChild(card1);
+  var card2 = document.createElement('div');
+  card2.className = 'card';
+  var tierHtml = '<h3>🎖️ 称号阶梯</h3>';
+  TITLES.forEach(function(t){
+    var isCur = (t.name === title.name);
+    var unlocked = seasonStars >= t.min;
+    tierHtml += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;background:'+(isCur?'#fef3c7':(unlocked?'#f0fdf4':'#f8fafc'))+';border:2px solid '+(isCur?'#fcd34d':(unlocked?'#86efac':'#e2e8f0'))+'"><div style="font-size:22px;width:32px;text-align:center;'+(unlocked?'':'filter:grayscale(1);opacity:.4')+'">'+t.emoji+'</div><div style="flex:1"><div style="font-size:13px;font-weight:900;color:'+(unlocked?t.color:'#94a3b8')+'">'+t.name+(isCur?' （当前）':'')+'</div><div style="font-size:11px;color:#94a3b8;margin-top:2px;font-weight:700">累计 '+t.min+' 颗星</div></div></div>';
+  });
+  card2.innerHTML = tierHtml;
+  el.appendChild(card2);
+}
+function renderMain(){
+  switch(curView){
+    case 'today': renderToday(); break;
+    case 'week': renderWeekView(); break;
+    case 'report': renderReportView(); break;
+    case 'boss': renderBossView(); break;
+    case 'data': renderDataView(); break;
+    case 'season': renderSeasonView(); break;
+    case 'draw': renderDrawView(); break;
+    case 'prize': renderPrizeView(); break;
+    case 'settings': renderSettingsView(); break;
+    default: renderToday();
+  }
+}
+function renderAll(){
+  renderSidebar();
+  renderTimeline();
+  renderMain();
+  var mondayOfCur = getMonday(new Date());
+  document.getElementById('nextWeek').disabled = curWeekMonday >= mondayOfCur;
+}
+var hwTimer = null;
+function saveHw(){
+  var wk = weekKey(curWeekMonday);
+  if(!homeworkData[wk]) homeworkData[wk] = {};
+  homeworkData[wk].yw = document.getElementById('hwYw').value;
+  homeworkData[wk].sx = document.getElementById('hwSx').value;
+  homeworkData[wk].yy = document.getElementById('hwYy').value;
+  save(LS_HOMEWORK, homeworkData);
+  renderAll();
+}
+document.getElementById('hwYw').oninput = function(){ clearTimeout(hwTimer); hwTimer = setTimeout(saveHw, 500); };
+document.getElementById('hwSx').oninput = function(){ clearTimeout(hwTimer); hwTimer = setTimeout(saveHw, 500); };
+document.getElementById('hwYy').oninput = function(){ clearTimeout(hwTimer); hwTimer = setTimeout(saveHw, 500); };
+document.getElementById('sbNav').addEventListener('click', function(e){
+  var item = e.target.closest('.sb-nav-item');
+  if(!item) return;
+  curView = item.dataset.view;
+  if(curView === 'today') curDate = new Date();
+  renderAll();
+});
+document.getElementById('prevWeek').onclick = function(){ curWeekMonday = addDays(curWeekMonday, -7); curDate = new Date(curWeekMonday); renderAll(); };
+document.getElementById('nextWeek').onclick = function(){ curWeekMonday = addDays(curWeekMonday, 7); curDate = new Date(curWeekMonday); renderAll(); };
+var editingTaskId = null;
+function toggleGoalGroup(){ var req = document.getElementById('fRequired').value === '1'; document.getElementById('fGoalGroup').style.display = req ? 'none' : 'block'; }
+document.getElementById('fRequired').onchange = toggleGoalGroup;
+function openTaskModal(id){
+  editingTaskId = id || null;
+  document.getElementById('taskModalTitle').textContent = id ? '编辑任务' : '新增任务';
+  document.getElementById('taskDelete').style.display = id ? 'block' : 'none';
+  document.querySelectorAll('.day-check').forEach(function(cb){ cb.checked = false; });
+  if(id){
+    var t = tasks.find(function(x){ return x.id === id; });
+    if(t){
+      document.getElementById('fSubject').value = t.subject;
+      document.getElementById('fName').value = t.name;
+      document.getElementById('fRequired').value = t.required ? '1' : '0';
+      document.getElementById('fGoal').value = t.goal || 4;
+      document.getElementById('fDuration').value = t.duration || '';
+      document.getElementById('fBossOnly').checked = !!t.bossOnly;
+      (t.days || []).forEach(function(d){ var cb = document.querySelector('.day-check[value="'+d+'"]'); if(cb) cb.checked = true; });
+    }
+  } else {
+    document.getElementById('fSubject').value = '语文';
+    document.getElementById('fName').value = '';
+    document.getElementById('fRequired').value = '1';
+    document.getElementById('fGoal').value = 4;
+    document.getElementById('fDuration').value = '';
+    document.getElementById('fBossOnly').checked = false;
+  }
+  toggleGoalGroup();
+  document.getElementById('modalTask').classList.add('show');
+}
+document.getElementById('taskCancel').onclick = function(){ document.getElementById('modalTask').classList.remove('show'); };
+document.getElementById('taskSave').onclick = function(){
+  var name = document.getElementById('fName').value.trim();
+  if(!name){ toast('请填写任务名称'); return; }
+  var subject = document.getElementById('fSubject').value;
+  var required = document.getElementById('fRequired').value === '1';
+  var goal = parseInt(document.getElementById('fGoal').value) || 4;
+  var duration = parseInt(document.getElementById('fDuration').value) || 0;
+  var days = [];
+  document.querySelectorAll('.day-check:checked').forEach(function(cb){ days.push(parseInt(cb.value)); });
+  var bossOnly = document.getElementById('fBossOnly').checked;
+  if(editingTaskId){
+    var t = tasks.find(function(x){ return x.id === editingTaskId; });
+    if(t){ t.name = name; t.subject = subject; t.days = days; t.duration = duration; t.required = required; t.bossOnly = bossOnly; if(!required) t.goal = goal; else delete t.goal; }
+  } else {
+    var newT = {id:'t'+Date.now(), name:name, subject:subject, days:days, duration:duration, required:required, bossOnly:bossOnly};
+    if(!required) newT.goal = goal;
+    tasks.push(newT);
+  }
+  save(LS_TASKS, tasks); document.getElementById('modalTask').classList.remove('show'); renderAll();
+};
+document.getElementById('taskDelete').onclick = function(){
+  if(!editingTaskId) return;
+  var id = editingTaskId;
+  showConfirm('确定删除这个任务吗？', function(){
+    tasks = tasks.filter(function(t){ return t.id !== id; });
+    Object.keys(checks).forEach(function(d){ Object.keys(checks[d]).forEach(function(k){ if(k === id || k.indexOf(id + '#') === 0) delete checks[d][k]; }); });
+    save(LS_TASKS, tasks); save(LS_CHECK, checks);
+    document.getElementById('modalTask').classList.remove('show'); renderAll();
+  }, {icon:'🗑️', okText:'删除'});
+};
+document.getElementById('prizeCancel').onclick = function(){ document.getElementById('modalPrize').classList.remove('show'); };
+document.getElementById('prizeAdd').onclick = function(){
+  var name = document.getElementById('pName').value.trim();
+  if(!name){ toast('请填写奖品名称'); return; }
+  var rarity = document.getElementById('pRarity').value;
+  var weight = parseInt(document.getElementById('pWeight').value) || 10;
+  var color = document.getElementById('pColor').value;
+  var cost = parseInt(document.getElementById('pCost').value) || 10;
+  if(editingPrizeId){
+    var p = prizes.find(function(x){ return x.id === editingPrizeId; });
+    if(p){ p.name = name; p.rarity = rarity; p.weight = weight; p.color = color; p.cost = cost; }
+  } else {
+    prizes.push({id:'p'+Date.now(), name:name, rarity:rarity, weight:weight, color:color, cost:cost});
+  }
+  save(LS_PRIZE, prizes); document.getElementById('modalPrize').classList.remove('show'); renderAll();
+};
+document.getElementById('prizeDelete').onclick = function(){
+  if(!editingPrizeId) return;
+  var id = editingPrizeId;
+  showConfirm('确定删除这个奖品吗？', function(){
+    prizes = prizes.filter(function(p){ return p.id !== id; });
+    save(LS_PRIZE, prizes); document.getElementById('modalPrize').classList.remove('show'); renderAll();
+  }, {icon:'🗑️', okText:'删除'});
+};
+document.getElementById('resultClose').onclick = function(){ document.getElementById('modalResult').classList.remove('show'); };
+function toast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2000);
+}
+function confettiBig(){
+  var emojis = ['🎉','⭐','✨','🎊','💫','🏆','🎁','💎','🌟','🎈'];
+  for(var i=0;i<50;i++){
+    var c = document.createElement('div');
+    c.style.cssText = 'position:fixed;font-size:'+(18 + Math.random()*20)+'px;pointer-events:none;z-index:250;left:'+(Math.random()*100)+'vw;top:-40px;animation:fall '+(1.5 + Math.random()*1.5)+'s linear forwards;animation-delay:'+(Math.random()*0.6)+'s;opacity:0.9';
+    c.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    document.body.appendChild(c);
+    setTimeout(function(){ c.remove(); }, 3500);
+  }
+}
+function showConfirm(msg, onOk, options){
+  options = options || {};
+  var bg = document.getElementById('confirmBg');
+  document.getElementById('confirmIcon').textContent = options.icon || '⚠️';
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('confirmOk').textContent = options.okText || '确定';
+  document.getElementById('confirmCancel').textContent = options.cancelText || '取消';
+  bg.classList.add('show');
+  function close(){ bg.classList.remove('show'); document.getElementById('confirmOk').onclick = null; document.getElementById('confirmCancel').onclick = null; }
+  document.getElementById('confirmOk').onclick = function(){ close(); if(onOk) onOk(); };
+  document.getElementById('confirmCancel').onclick = close;
+}
+renderAll();
+
+/* ================= PWA：注册 Service Worker，实现离线可用 ================= */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      console.log('[SW] 注册成功，作用域：', reg.scope);
+    }).catch(function (err) {
+      console.log('[SW] 注册失败：', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
